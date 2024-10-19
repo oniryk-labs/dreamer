@@ -1,0 +1,4 @@
+{{{
+  exports({ to: app.validatorsPath(path) })
+}}}
+{{{ content }}}

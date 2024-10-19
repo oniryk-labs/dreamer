@@ -1,0 +1,9 @@
+{{{
+  exports({ to: app.modelsPath(file) })
+}}}
+import { BaseModel, column } from '@adonisjs/lucid/orm'
+{{{ imports }}}
+
+export default class {{name}} extends {{ extend }} {
+  {{{ columns }}}
+}

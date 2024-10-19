@@ -1,0 +1,44 @@
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = '__TABLE_NAME__'
+
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.increments('id', { primaryKey: false }).notNullable()
+      table.uuid('uuid').notNullable()
+      table.text('text_field').notNullable()
+      table.integer('integer_field').notNullable()
+      table.bigInteger('visits')
+      table.text('text_field_long', 'longtext').notNullable()
+      table.string('title')
+      table.string('title_limited', 100)
+      table.float('price')
+      table.float('price_precise', 8, 2)
+      table.decimal('tax')
+      table.decimal('tax_precise', 8, 2)
+      table.boolean('is_published')
+      table.date('dob')
+      table.dateTime('published_at')
+      table.time('some_time', { precision: 6 })
+      table.binary('binary_column')
+      table.json('settings')
+      table.jsonb('configs')
+
+      table.timestamp('deleted_at').nullable()
+      table.timestamps(true, true)
+
+      table.enu('account_status', ['PENDING', 'ACTIVE', 'SUSPENDED'], {
+        useNative: true,
+        enumName: 'user_account_status',
+        existingType: false,
+      })
+
+      table.enum('role', ['ADMIN', 'USER'])
+    })
+  }
+
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}

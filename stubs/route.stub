@@ -1,0 +1,12 @@
+{{{
+  exports({ to: app.startPath(file) })
+}}}
+import router from '@adonisjs/core/services/router'
+{{{ '\n' }}}{{{ deps }}}
+
+router
+  .group(() => {
+{{{ '\n' }}}{{{ routes }}}
+  })
+{{{ '\n' }}}{{{ matchers }}}
+{{{ '\n' }}}  {{{ prefix }}}

@@ -1,0 +1,11 @@
+{{{
+  exports({ to: app.configPath('dreamer.ts') })
+}}}
+import { defineConfig } from '@oniryk/dreamer'
+
+const dreamerConfig = defineConfig({
+  useUUID: {{ useUUID ? 'true' : 'false' }},
+  useSoftDelete: {{ useSoftDeletes ? 'true' : 'false' }},
+})
+
+export default dreamerConfig
