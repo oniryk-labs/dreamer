@@ -21,11 +21,16 @@ export async function replaceContent(file: string, { template, content }: Templa
 export function watchFileOnce(filepath: string) {
   const watcher = chokidar.watch(filepath)
 
-  return new Promise<void>((resolve) => {
-    watcher.on('change', () => {
-      console.log('File changed')
-      watcher.close()
-      resolve()
+  return new Promise<void>(async (resolve) => {
+    const initialContent = await readFile(filepath, 'utf-8')
+
+    watcher.on('change', async () => {
+      const currentContent = await readFile(filepath, 'utf-8')
+
+      if (currentContent !== initialContent) {
+        watcher.close()
+        resolve()
+      }
     })
   })
 }

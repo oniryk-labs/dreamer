@@ -28,10 +28,20 @@ export function generateController({
     }
   }
 
+  if (formatters.length) {
+    for (const formatter of formatters) {
+      imports.push(`import ${formatter} from '@oniryk/dreamer-${formatter}'`)
+    }
+  }
+
+  const indexParams = formatters.length
+    ? `, { formats: [${formatters.map((f) => `${f}()`).join(', ')}] }`
+    : ''
+
   actions.forEach((action) => {
     switch (action) {
       case 'index':
-        methods.push(`  public index = index(${model.name})`)
+        methods.push(`  public index = index(${model.name}${indexParams})`)
         break
       case 'show':
         methods.push(`  public show = show(${model.name})`)

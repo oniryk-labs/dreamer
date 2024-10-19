@@ -2,12 +2,19 @@ import { SourceFile } from 'ts-morph'
 
 export const AUTOSAVE_OFF = false
 
-export function addImportIfNotExists(
-  sourceFile: SourceFile,
-  moduleSpecifier: string,
-  importName?: string,
-  autoSave: boolean = true
-) {
+export function addImportIfNotExists({
+  sourceFile,
+  moduleSpecifier,
+  importName,
+  alias,
+  autoSave = true,
+}: {
+  sourceFile: SourceFile
+  moduleSpecifier: string
+  importName?: string
+  alias?: string
+  autoSave?: boolean
+}) {
   const existingImport = sourceFile.getImportDeclaration(
     (importDecl) => importDecl.getModuleSpecifierValue() === moduleSpecifier
   )
@@ -15,21 +22,27 @@ export function addImportIfNotExists(
   if (existingImport) {
     if (importName) {
       const namedImports = existingImport.getNamedImports()
-      const hasNamedImport = namedImports.some(
-        (namedImport) => namedImport.getName() === importName
-      )
+      const existingImportSpecifier = namedImports.find((namedImport) => {
+        if (alias) {
+          return namedImport.getAliasNode()?.getText() === alias
+        } else {
+          return namedImport.getName() === importName
+        }
+      })
 
-      if (!hasNamedImport) {
-        existingImport.addNamedImport(importName)
+      if (!existingImportSpecifier) {
+        if (alias) {
+          existingImport.addNamedImport({ name: importName, alias: alias })
+        } else {
+          existingImport.addNamedImport(importName)
+        }
       }
     }
-    // If importName is not provided, we don't need to do anything
-    // as the import already exists
   } else {
     if (importName) {
       sourceFile.addImportDeclaration({
         moduleSpecifier: moduleSpecifier,
-        namedImports: [importName],
+        namedImports: alias ? [{ name: importName, alias: alias }] : [importName],
       })
     } else {
       sourceFile.addImportDeclaration({
@@ -42,7 +55,3 @@ export function addImportIfNotExists(
     sourceFile.saveSync()
   }
 }
-
-// Usage examples:
-// addImportIfNotExists(sourceFile, "react", "useState");
-// addImportIfNotExists(sourceFile, "./files.js");

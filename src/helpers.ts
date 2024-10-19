@@ -5,14 +5,18 @@ export const pipe =
   (x: T[0]): R =>
     fns.reduce((v, f) => f(v), x as any)
 
-export const waitWithAnimation = async (
-  logger: BaseCommand['logger'],
-  fn: () => Promise<void>,
+export const waitWithAnimation = async ({
+  logger,
+  message,
+  action,
+}: {
+  logger: BaseCommand['logger']
   message: string
-) => {
+  action: () => Promise<void>
+}) => {
   const animation = logger.await(message)
   animation.start()
-  await fn()
+  await action()
   animation.stop()
 }
 

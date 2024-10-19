@@ -2,14 +2,6 @@ import { MigrationRunner } from '@adonisjs/lucid/migration'
 import { BaseCommand } from '@adonisjs/core/ace'
 
 export async function runMigrator(command: BaseCommand) {
-  const runMigrations = await command.prompt.confirm('would you like to run migrations now?', {
-    default: true,
-  })
-
-  if (!runMigrations) {
-    return
-  }
-
   const db = await command.app.container.make('lucid.db')
 
   const migrator = new MigrationRunner(db, command.app, {

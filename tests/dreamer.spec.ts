@@ -15,17 +15,18 @@ test.group('Command', (group) => {
     const ignitor = createIgnitor(fs, { withDatabase: true })
 
     const ace = await new AceFactory().make(ignitor)
-    await ace.app.boot()
-    await ace.app.init()
+
     ;[
-      'would you like to run migrations now?',
       'would you like to add custom formats to "index" response (ex: csv, xls)',
       'the following packages are not installed: @oniryk/dreamer-csv, @oniryk/dreamer-xls. Would you like to install them?',
       'the following packages are not installed: @oniryk/dreamer-csv. Would you like to install them?',
       'the following packages are not installed: @oniryk/dreamer-xls. Would you like to install them?',
+      'would you like to run migrations now?',
     ].forEach((message) => ace.prompt.trap(message).accept())
 
-    ace.prompt.trap('select formats to add').chooseOptions([0,1])
+    ace.prompt.trap('select formats to add').chooseOptions([1])
+    await ace.app.boot()
+    await ace.app.init()
 
     Dreamer.emitter.on(DreamerEvent['before:formats:install'], async () => {
       await setupNpm(fs)
@@ -48,6 +49,7 @@ test.group('Command', (group) => {
       Dreamer.emitter.on(DreamerEvent['command:done'], async () => resolve())
 
       const command = await ace.create(Dreamer, ['post'])
+      await command.prepare()
       await command.run()
 
       Dreamer.emitter.clear()

@@ -1,6 +1,5 @@
 import { BaseCommand } from '@adonisjs/core/ace'
 import { isPackageInstalled } from '../package.js'
-import { dd } from '../helpers.js'
 import { Codemods } from '@adonisjs/core/ace/codemods'
 
 const supportedFormats = () => [

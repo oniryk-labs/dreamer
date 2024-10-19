@@ -1,8 +1,14 @@
 import { SourceFile } from 'ts-morph'
-import { addImportIfNotExists, AUTOSAVE_OFF } from './imports.js'
+import { addImportIfNotExists } from './imports.js'
 
 export function changeDefaultExceptionHandler(source: SourceFile) {
-  addImportIfNotExists(source, '@oniryk/dreamer/extensions/http', 'error as errorFn', AUTOSAVE_OFF)
+  addImportIfNotExists({
+    sourceFile: source,
+    moduleSpecifier: '@oniryk/dreamer/extensions/http',
+    importName: 'error',
+    alias: 'errorFn',
+    autoSave: true,
+  })
   const handleMethod = source.getClassOrThrow('HttpExceptionHandler').getMethodOrThrow('handle')
 
   handleMethod.setBodyText('return errorFn(ctx.response, error as Error)')
