@@ -1,0 +1,7 @@
+{{{
+  exports({ to: app.startPath('../' + filepath) })
+}}}
+vars {
+  baseurl: http://localhost:3333
+  access_token:
+}

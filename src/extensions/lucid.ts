@@ -1,8 +1,9 @@
 import { DateTime } from 'luxon'
 import { randomUUID } from 'node:crypto'
-import type { ModelAdapterOptions } from '@adonisjs/lucid/types/model'
+import type { ModelAdapterOptions, ExtractScopes, LucidModel } from '@adonisjs/lucid/types/model'
 import type { NormalizeConstructor } from '@adonisjs/core/types/helpers'
 import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
+
 import {
   BaseModel,
   column,
@@ -11,6 +12,9 @@ import {
   beforePaginate,
   beforeFind,
 } from '@adonisjs/lucid/orm'
+
+export type ExcludeUndefined<T> = T extends undefined ? never : T
+export type Scopes<T extends LucidModel> = ExcludeUndefined<keyof ExtractScopes<T>>
 
 export function withUUID() {
   return <Model extends NormalizeConstructor<typeof BaseModel>>(superclass: Model) => {

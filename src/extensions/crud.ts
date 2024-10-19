@@ -8,7 +8,7 @@ import { success, error } from './http.js'
 import { OutputFormatFn } from './format.js'
 import { DreamerConfig } from '../../types.js'
 import { pagination } from '../validator/pagination.js'
-import { parseModelSeachableFields, SearchableModel } from './lucid.js'
+import { parseModelSeachableFields, Scopes, SearchableModel } from './lucid.js'
 import { ExtractScopes } from '@adonisjs/lucid/types/model'
 
 export type GenericMetadata = Record<string, any> | undefined
@@ -42,7 +42,7 @@ export function index<
     validator?: VineValidator<Schema, MetaData>
     perPage?: number
     formats?: OutputFormatFn<Model>[]
-    scopes?: (scopes: ExtractScopes<Model>) => void
+    scope?: Scopes<Model> | ((scopes: ExtractScopes<Model>) => void)
   }
 ) {
   return async (ctx: HttpContext) => {
@@ -64,8 +64,16 @@ export function index<
         }
       }
 
-      if (options?.scopes) {
-        baseQuery.withScopes(options.scopes)
+      if (options?.scope) {
+        if (typeof options.scope === 'function') {
+          baseQuery.withScopes(options.scope)
+        }
+
+        if (typeof options.scope === 'string') {
+          baseQuery.withScopes((q: ExtractScopes<Model>) => {
+            q[options.scope]()
+          })
+        }
       }
 
       if (options?.formats) {

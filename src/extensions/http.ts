@@ -35,7 +35,7 @@ export function error(
       error: {
         code: 'VALIDATION_ERROR',
         message: originError.message,
-        errors: (originError as any).messages,
+        issues: (originError as any).messages,
       },
     })
   }

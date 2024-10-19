@@ -21,11 +21,16 @@ export async function replaceContent(file: string, { template, content }: Templa
 export function watchFileOnce(filepath: string) {
   const watcher = chokidar.watch(filepath)
 
-  return new Promise<void>((resolve) => {
-    watcher.on('change', () => {
-      console.log('File changed')
-      watcher.close()
-      resolve()
+  return new Promise<void>(async (resolve) => {
+    const initialContent = await readFile(filepath, 'utf-8')
+
+    watcher.on('change', async () => {
+      const currentContent = await readFile(filepath, 'utf-8')
+
+      if (currentContent !== initialContent) {
+        watcher.close()
+        resolve()
+      }
     })
   })
 }
@@ -62,7 +67,10 @@ export async function setupFakeAdonisProject(fs: FileSystem) {
   await Promise.all([
     fs.createJson('tsconfig.json', { compilerOptions: {} }),
     fs.create('adonisrc.ts', await readFile('./tests/templates/adonisrc.txt', 'utf-8')),
-    fs.create('exceptions/handler.ts', await readFile('./tests/templates/handler.txt', 'utf-8')),
+    fs.create(
+      'app/exceptions/handler.ts',
+      await readFile('./tests/templates/handler.txt', 'utf-8')
+    ),
     fs.create('start/kernel.ts', await readFile('./tests/templates/kernel.txt', 'utf-8')),
     fs.create('start/env.ts', await readFile('./tests/templates/env.txt', 'utf-8')),
     fs.create('start/routes.ts', await readFile('./tests/templates/routes.txt', 'utf-8')),

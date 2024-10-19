@@ -1,115 +1,533 @@
-# AdonisJS package starter kit
+# @oniryk/dreamer
 
-> A boilerplate for creating AdonisJS packages
+<p align="center">
+  <a href="https://www.npmjs.com/package/@oniryk/dreamer">
+  <img src="https://img.shields.io/npm/v/@oniryk/dreamer.svg?style=for-the-badge" alt="npm version" />
+  </a>
+  <a href="https://www.npmjs.com/package/@oniryk/dreamer">
+    <img src="https://img.shields.io/npm/dt/@oniryk/dreamer.svg?style=for-the-badge" alt="npm total downloads" />
+  </a>
+  <a href="https://www.npmjs.com/package/@oniryk/dreamer">
+    <img src="https://img.shields.io/npm/dm/@oniryk/dreamer.svg?style=for-the-badge" alt="npm monthly downloads" />
+  </a>
+  <a href="https://www.npmjs.com/package/@oniryk/dreamer">
+    <img src="https://img.shields.io/npm/l/@oniryk/dreamer.svg?style=for-the-badge" alt="npm license" />
+  </a>
+  <a href="https://github.com/oniryk-labs/dreamer/actions/workflows/main.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/oniryk-labs/dreamer/main.yml?style=for-the-badge&branch=main" alt="build status" />
+  </a>
+</p>
 
-This repo provides you with a starting point for creating AdonisJS packages. Of course, you can create a package from scratch with your folder structure and workflow. However, using this starter kit can speed up the process, as you have fewer decisions to make.
+`@oniryk/dreamer` is a collection of tools, developed over [oniryk vision](http://oniryk.tech/manifest), that helps you build APIs with [AdonisJS v6](https://adonisjs.com) faster and easier. It includes a code generator and a set of helper functions and abstractions to speed up your development workflow.
 
-## Setup
+What is included:
 
-- Clone the repo on your computer, or use `giget` to download this repo without the Git history.
-  ```sh
-  npx giget@latest gh:adonisjs/pkg-starter-kit
-  ```
-- Install dependencies.
-- Update the `package.json` file and define the `name`, `description`, `keywords`, and `author` properties.
-- The repo is configured with an MIT license. Feel free to change that if you are not publishing under the MIT license.
+- A code generator that creates a full CRUD starting from a migration definition;
+- Abstractions for CRUD actions;
+- Support for UUID as external ID;
+- Support for soft deletes;
+- Default formatting for API responses.
 
-## Folder structure
-
-The starter kit mimics the folder structure of the official packages. Feel free to rename files and folders as per your requirements.
-
-```
-├── providers
-├── src
-├── bin
-├── stubs
-├── configure.ts
-├── index.ts
-├── LICENSE.md
-├── package.json
-├── README.md
-├── tsconfig.json
-├── tsnode.esm.js
-```
-
-- The `configure.ts` file exports the `configure` hook to configure the package using the `node ace configure` command.
-- The `index.ts` file is the main entry point of the package.
-- The `tsnode.esm.js` file runs TypeScript code using TS-Node + SWC. Please read the code comment in this file to learn more.
-- The `bin` directory contains the entry point file to run Japa tests.
-- Learn more about [the `providers` directory](./providers/README.md).
-- Learn more about [the `src` directory](./src/README.md).
-- Learn more about [the `stubs` directory](./stubs/README.md).
-
-### File system naming convention
-
-We use `snake_case` naming conventions for the file system. The rule is enforced using ESLint. However, turn off the rule and use your preferred naming conventions.
-
-## Peer dependencies
-
-The starter kit has a peer dependency on `@adonisjs/core@6`. Since you are creating a package for AdonisJS, you must make it against a specific version of the framework core.
-
-If your package needs Lucid to be functional, you may install `@adonisjs/lucid` as a development dependency and add it to the list of `peerDependencies`.
-
-As a rule of thumb, packages installed in the user application should be part of the `peerDependencies` of your package and not the main dependency.
-
-For example, if you install `@adonisjs/core` as a main dependency, then essentially, you are importing a separate copy of `@adonisjs/core` and not sharing the one from the user application. Here is a great article explaining [peer dependencies](https://blog.bitsrc.io/understanding-peer-dependencies-in-javascript-dbdb4ab5a7be).
-
-## Published files
-
-Instead of publishing your repo's source code to npm, you must cherry-pick files and folders to publish only the required files.
-
-The cherry-picking uses the `files` property inside the `package.json` file. By default, we publish the following files and folders.
-
-```json
-{
-  "files": ["build/src", "build/providers", "build/stubs", "build/index.d.ts", "build/index.js"]
-}
+## Installation
+```bash
+node ace add @oniryk/dreamer
 ```
 
-If you create additional folders or files, mention them inside the `files` array.
+After installing the package, you will be prompted with questions and a dreamer config file will be generated like this:
 
-## Exports
+```typescript
+import { defineConfig } from '@oniryk/dreamer'
 
-[Node.js Subpath exports](https://nodejs.org/api/packages.html#subpath-exports) allows you to define the exports of your package regardless of the folder structure. This starter kit defines the following exports.
+const dreamerConfig = defineConfig({
+  useUUID: true,
+  useSoftDelete: true,
+  bruno: {
+    enabled: true,
+    documentsDir: '/docs',
+    useAuth: true,
+  },
+})
 
-```json
-{
-  "exports": {
-    ".": "./build/index.js",
-    "./types": "./build/src/types.js"
+export default dreamerConfig
+```
+
+### Configuring
+
+- **useUUID:** when enabled, all models generated by the `dreamer` command will use `uuid` as field instead of id in the methods `find()` and `findOrFail()` from Lucid. [learn more](#)
+- **useSoftDelete:** when enabled, all models generated by the `dreamer` command will implement soft deletes. It will add the field `deleted_at` in the migration file. [learn more](#)
+- **bruno.enabled:** when enabled, will generate [bruno](https://usebruno.com) files for all routes generated by the `dreamer` command
+- **bruno.documentsDir:** specifies where bruno's files will be placed
+- **bruno.useAuth:** when enabled, will automatically add an `Authorization: Bearer ...` into the request file.
+
+## Code generation
+
+Dreamer has a powerful code generation tool that automates the creation of complete CRUD operations from a single migration file. This streamlines your development process by generating all necessary components with minimal configuration.
+
+### Basic Usage
+To generate a new CRUD, use the following command:
+
+```bash
+node ace dreamer [entity]
+```
+
+Replace `[entity]` with your desired entity name. For example, to create a CRUD for blog posts:
+
+```bash
+node ace dreamer posts
+```
+
+#### Workflow
+1. The command creates a migration file
+2. You'll be prompted to edit the file and define your entity fields
+3. After saving, Dreamer automatically generates all CRUD components
+
+#### Generated Components
+Dreamer creates a complete set of files for your entity:
+
+```
+app/
+├── models/
+│   └── post.ts
+├── controllers/
+│   └── posts_controller.ts
+├── validators/
+│   └── post.ts
+├── routes/
+│   └── posts.ts
+└── docs/  # If Bruno is enabled
+    └── posts/
+        └── index.bru
+        └── show.bru
+        └── store.bru
+        └── update.bru
+        └── destroy.bru
+```
+
+- **Model**: Lucid model with all field definitions
+- **Controller**: RESTful actions implementation
+- **Validators**: Input validation rules for store and update actions
+- **Routes**: API endpoint definitions
+- **API Documentation**: Automatically generated if Bruno is enabled in your configuration
+
+### Advanced Features
+
+#### Custom Actions
+You can specify which CRUD actions to generate using the `--actions` flag:
+
+```bash
+node ace dreamer posts --actions=index,show
+```
+
+Available actions:
+- `index` (List all)
+- `show` (View single)
+- `store` (Create)
+- `update` (Edit)
+- `destroy` (Delete)
+
+#### Nested Resources
+Dreamer supports nested resource generation for related entities. This is particularly useful for parent-child relationships:
+
+```bash
+node ace dreamer posts/comments
+```
+
+> **Note**: Currently, dreamer doesn't have the capacity to determine relationships.
+
+#### Development Note
+
+The code generated by Dreamer is 100% compatible with AdonisJS 6 development standards. While Dreamer's primary goal is to provide abstractions for common CRUD workflows to speed up development, it's designed to work seamlessly alongside traditional AdonisJS development patterns.
+
+You can:
+- Use Dreamer's abstractions for standard CRUD operations
+- Create custom actions for complex scenarios using regular AdonisJS patterns
+- Mix both approaches in the same controller
+- Extend or override Dreamer's generated code using standard AdonisJS features
+
+For example:
+```typescript
+import Post from '#models/post'
+import { index, show, destroy } from '@oniryk/dreamer/extensions/crud'
+
+export default class PostsController {
+  // Using Dreamer's abstractions for standard operations
+  public index = index(Post)
+  public show = show(Post)
+  public destroy = destroy(Post)
+
+  // Custom action for complex business logic
+  public async publish({ params, response }: HttpContext) {
+    const post = await Post.findOrFail(params.id)
+
+    await post.merge({
+      status: 'published',
+      publishedAt: new Date()
+    }).save()
+
+    await Event.emit('post:published', post)
+
+    return response.status(200).send(post)
   }
 }
 ```
 
-- The dot `.` export is the main export.
-- The `./types` exports all the types defined inside the `./build/src/types.js` file (the compiled output).
+This flexibility allows you to leverage Dreamer's convenience while maintaining the freedom to implement custom business logic when needed.
 
-Feel free to change the exports as per your requirements.
+## Extensions
+The `@oniryk/dreamer` package provides several extensions to enhance your AdonisJS application with additional functionality. These extensions are designed to be composable and can be used individually or together to extend your models and controllers.
 
-## Testing
+### Lucid Extensions
 
-We configure the [Japa test runner](https://japa.dev/) with this starter kit. Japa is used in AdonisJS applications as well. Just run one of the following commands to execute tests.
+#### UUID Support
 
-- `npm run test`: This command will first lint the code using ESlint and then run tests and report the test coverage using [c8](https://github.com/bcoe/c8).
-- `npm run quick:test`: Runs only the tests without linting or coverage reporting.
+The `withUUID` extension adds UUID support to your models. It's based on the concept of using UUID as a key to expose externally while keeping an autoincrementing integer as the primary key.
 
-The starter kit also has a Github workflow file to run tests using Github Actions. The tests are executed against `Node.js 20.x` and `Node.js 21.x` versions on both Linux and Windows. Feel free to edit the workflow file in the `.github/workflows` directory.
+```typescript
+import { BaseModel } from '@adonisjs/lucid/orm'
+import { compose } from '@adonisjs/core/helpers'
+import { withUUID } from '@oniryk/dreamer/extensions/lucid'
 
-## TypeScript workflow
+export default class Post extends compose(BaseModel, withUUID()) {
+  //...
+}
+```
 
-- The starter kit uses [tsc](https://www.typescriptlang.org/docs/handbook/compiler-options.html) for compiling the TypeScript to JavaScript when publishing the package.
-- [TS-Node](https://typestrong.org/ts-node/) and [SWC](https://swc.rs/) are used to run tests without compiling the source code.
-- The `tsconfig.json` file is extended from [`@adonisjs/tsconfig`](https://github.com/adonisjs/tooling-config/tree/main/packages/typescript-config) and uses the `NodeNext` module system. Meaning the packages are written using ES modules.
-- You can perform type checking without compiling the source code using the `npm run type check` script.
+**What's changed under the hood?**
 
-Feel free to explore the `tsconfig.json` file for all the configured options.
+- `id` column keeps existing as primary key to speed up relationship queries
+- `uuid` column is defined and autogenerates UUIDs for new records
+- changes the default behavior of `find` and `findOrFail` methods to use the `uuid` column instead of `id` when making queries
 
-## ESLint and Prettier setup
+#### Soft-delete Support
 
-The starter kit configures ESLint and Prettier. Both configurations are stored within the `package.json` file and use our [shared config](https://github.com/adonisjs/tooling-config/tree/main/packages). Feel free to change the configuration, use custom plugins, or remove both tools altogether.
+The `withSoftDelete` extension implements soft delete functionality in your models:
+* Adds a `deletedAt` timestamp column to your model
+* Automatically filters out soft-deleted records from queries
 
-## Using Stale bot
+```typescript
+import { BaseModel } from '@adonisjs/lucid/orm'
+import { compose } from '@adonisjs/core/helpers'
+import { withSoftDelete } from '@oniryk/dreamer/extensions/lucid'
 
-The [Stale bot](https://github.com/apps/stale) is a Github application that automatically marks issues and PRs as stale and closes after a specific duration of inactivity.
+export default class Post extends compose(BaseModel, withSoftDelete()) {
+  // ...
+}
+```
 
-Feel free to delete the `.github/stale.yml` and `.github/lock.yml` files if you decide not to use the Stale bot.
+#### Searchable Fields
+
+The searchable fields feature allows you to define which fields can be searched in your models:
+* Define exact match fields (e.g., 'author_id')
+* Define partial match fields using the 'like:' prefix (e.g., 'like:title')
+* Automatically handles search queries in the CRUD index operation
+* Supports multiple search criteria in a single query
+
+```typescript
+import { BaseModel } from '@adonisjs/lucid/orm'
+import { compose } from '@adonisjs/core/helpers'
+import { withSoftDelete } from '@oniryk/dreamer/extensions/lucid'
+
+export default class Post extends BaseModel {
+  public static searchable = ['author_id', 'like:title']
+}
+```
+
+### CRUD
+The package provides pre-built CRUD operations that can be easily integrated into your controllers. All operations take a model as the first argument and offer some options depending on your functionality.
+
+This is a basic example of a complete RESTful controller:
+
+```typescript
+import Post from '#models/post'
+import { index, show, store, update, destroy } from '@oniryk/dreamer/extensions/crud'
+import { validatePostCreate, validatePostUpdate } from '#validators/post'
+import csv from '@oniryk/dreamer-csv'
+
+export default class PostsController {
+  public index = index(Post)
+  public show = show(Post)
+  public store = store(Post, validatePostCreate)
+  public update = update(Post, validatePostUpdate)
+  public destroy = destroy(Post)
+}
+```
+
+#### index
+The `index` method provides a flexible way to list and filter records.
+
+```typescript
+import { index } from '@oniryk/dreamer/extensions/crud'
+import csv from '@oniryk/dreamer-csv'
+import { validatePostIndex } from '#validators/post'
+
+export default class PostsController {
+  public index = index(Post, {
+    perPage: 20,
+    formats: [csv()],
+    scope: 'highlights',
+    validator: validatePostIndex
+  })
+}
+```
+
+| Option      | Type               | Description                                                  |
+|-------------|--------------------|--------------------------------------------------------------|
+| `perPage`   | number             | (optional) Number of records per page                        |
+| `formats`   | OutputFormatFn[]   | (optional) Array of formatters to enable alternative output formats. When a format is added, the user can request the content in a format by passing `f` or `format` in the query string:<br><br>Ex: `GET /posts?f=csv` |
+| `scope`     | string \| function | (optional) Name of model scope to apply or function compatible with `withScopes` method of Lucid query builder<br><br>Ex: `(scopes) => scopes.highlights()` |
+| `validator` | VineValidator      | (optional) Vine validation schema for query parameters       |
+
+#### show
+The `show` method provides a way to retrieve a single record. When using UUID extension, it automatically handles UUID-based lookups.
+
+```typescript
+import Post from '#models/post'
+import { show } from '@oniryk/dreamer/extensions/crud'
+
+export default class PostsController {
+  public show = show(Post)
+}
+```
+
+| Option  | Type      | Description           |
+|---------|-----------|-----------------------|
+| `model` | BaseModel | The Lucid model class |
+
+#### store
+The `store` method handles record creation with validation and optional data mutation.
+
+```typescript
+import Post from '#models/post'
+import { store } from '@oniryk/dreamer/extensions/crud'
+import { validatePostUpdate } from '#validators/post'
+
+export default class PostsController {
+  public store = store(Post, validatePostUpdate, {
+    mutate (row, payload) {
+      row.title = payload.title.toLowerCase()
+    }
+  })
+}
+```
+
+| Parameter        | Type                                                | Description                                      |
+|------------------|-----------------------------------------------------|--------------------------------------------------|
+| `model`          | BaseModel                                           | The Lucid model class                            |
+| `validator`      | VineValidator                                       | Vine validator schema for input validation       |
+| `options.mutate` | (row: Model, payload: any) => void \| Promise<void> | (optional) Callback to modify data before saving |
+
+#### update
+The `update` method handles record updates with validation and optional data mutation.
+
+```typescript
+import Post from '#models/post'
+import { update } from '@oniryk/dreamer/extensions/crud'
+import { validatePostUpdate } from '#validators/post'
+
+export default class PostsController {
+  public update = update(Post, validatePostUpdate, {
+    mutate (row, payload) {
+      row.title = payload.title.toLowerCase()
+    }
+  })
+}
+```
+
+| Parameter        | Type                                                | Description                                      |
+|------------------|-----------------------------------------------------|--------------------------------------------------|
+| `model`          | BaseModel                                           | The Lucid model class                            |
+| `validator`      | VineValidator                                       | Vine validator schema for input validation       |
+| `options.mutate` | (row: Model, payload: any) => void \| Promise<void> | (optional) Callback to modify data before saving |
+
+#### destroy
+The `destroy` method handles record deletion with proper error handling.
+
+```typescript
+import Post from '#models/post'
+import { destroy } from '@oniryk/dreamer/extensions/crud'
+
+export default class PostsController {
+  public destroy = destroy(Post)
+}
+```
+
+| Parameter | Type      | Description           |
+|-----------|-----------|-----------------------|
+| `model`   | BaseModel | The Lucid model class |
+
+### JSON Response Formatters
+
+JSON response formatters provide a consistent way to structure your API responses. They help maintain a uniform pattern for success and error across all your routes.
+
+#### success
+The `success` method formats successful responses, supporting both simple and paginated data. It automatically structures the response with an "ok" status and includes the provided data, along with pagination metadata when applicable.
+
+**Example 1: Simple List Response**
+```typescript
+import Post from '#models/post'
+import { HttpContext } from '@adonisjs/core/http'
+import { success } from '@oniryk/dreamer/extensions/http'
+
+export default class PostsController {
+  public async list({ response }: HttpContext) {
+    const posts = await Post.all()
+    success(response, posts)
+  }
+}
+
+// Response:
+{
+  "status": "ok",
+  "data": [ ... ]
+}
+```
+
+**Example 2: Paginated Response**
+```typescript
+export default class PostsController {
+  public async paginated({ response, request }: HttpContext) {
+    const page = request.input('page', 1);
+    const limit = 20;
+    const posts = await Post.paginate(page, limit)
+    success(response, posts)
+  }
+}
+
+// Response:
+{
+  "status": "ok",
+  "data": [ ... ],
+  "meta": {
+    "currentPage": 1,
+    "firstPage": 1,
+    "firstPageUrl": "/?page=1",
+    "lastPage": 1,
+    "lastPageUrl": "/?page=1",
+    "nextPageUrl": null,
+    "perPage": 10,
+    "previousPageUrl": null,
+    "total": 6
+  }
+}
+```
+
+#### error
+The `error` method standardizes error handling in the API, providing a consistent structure for different types of errors. It can handle validation errors, custom errors, and standard system exceptions.
+
+**Example 1: Validation Error Handling**
+```typescript
+import Post from '#models/post'
+import { HttpContext } from '@adonisjs/core/http'
+import { error } from '@oniryk/dreamer/extensions/http'
+import { validatePostCreate } from '#validators/post'
+
+export default class PostsController {
+  public async store({ response, request }: HttpContext) {
+    try {
+      await request.validate(validatePostCreate)
+    } catch (e) {
+      error(response, e);
+    }
+  }
+}
+
+// Response:
+{
+  "status": "error",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failure",
+    "issues": [
+       {
+         "field": "title",
+         "message": "The title field must be defined",
+         "rule": "required"
+       }
+    ]
+  }
+}
+```
+
+**Example 2: Standard Error Response**
+```typescript
+export default class PostsController {
+  public async check ({ response, request }: HttpContext) {
+    if (1 === 1) {
+      error(response, new Error('invalid option'));
+    }
+  }
+}
+
+// Response:
+{
+  "status": "error",
+  "error": {
+    "code": "Error",
+    "message": "invalid option"
+  }
+}
+```
+
+**Example 3: Custom Error Response**
+```typescript
+export default class PostsController {
+  public async check2 ({ response, request }: HttpContext) {
+    if (1 === 1) {
+      error(response, { code: 'ERROR_CODE', message: 'invalid option'});
+    }
+  }
+}
+
+// Response:
+{
+  "status": "error",
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "invalid option"
+  }
+}
+```
+
+### Output formatters
+
+You may want to deliver a response in a specific file format like `csv`, as you can see in the `index` action from the CRUD abstraction extension.
+
+Dreamer has optional built-in formatters for `csv` and `xlsx`. You can install and use them as needed. They come in two separate packages: [@oniryk/dreamer-csv](https://www.npmjs.com/package/@oniryk/dreamer-csv) and [@oniryk/dreamer-xls](https://www.npmjs.com/package/@oniryk/dreamer-xls).
+
+You can also create your own formatter. It must implement the following type:
+
+```typescript
+type OutputFormatFn<M extends typeof BaseModel> = {
+  (ctx: HttpContext, rows: InstanceType<M>[]): Promise<void> | void
+  formatName: string
+}
+```
+
+Let's create a new example formatter:
+
+```typescript
+export default function pdf({ name }: { name: string }) {
+  const handler = async function ({ response }: HttpContext, rows: unknown[]) {
+    const content = await convertToPdf(rows); // imaginary function
+
+    response.header("Content-Type", "application/pdf");
+    response.header("Content-Disposition", `attachment; filename="${name}"`);
+    response.send(content);
+  };
+
+  handler.formatName = "pdf";
+  return handler;
+}
+```
+
+Using our new formatter:
+
+```typescript
+export default class PostsController {
+  public index = index(Post, {
+    formats: [
+      pdf({ name: 'posts.pdf' })
+    ]
+  })
+}
+```

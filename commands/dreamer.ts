@@ -1,7 +1,10 @@
 import { BaseCommand, args, flags } from '@adonisjs/core/ace'
 import { CommandOptions } from '@adonisjs/core/types/ace'
-import TSMorphMigrationParser from '../src/codegen/ts-morph/parsers/migration.js'
+import { CodeTransformer } from '@adonisjs/assembler/code_transformer'
+import colors from '@poppinss/colors'
+import path from 'node:path'
 
+import TSMorphMigrationParser from '../src/codegen/ts-morph/parsers/migration.js'
 import { DreamerConfig } from '../types.js'
 import { generateModel } from '../src/codegen/model.js'
 import { stubsRoot } from '../stubs/main.js'
@@ -11,10 +14,11 @@ import { ControllerAction, generateController } from '../src/codegen/controller.
 import { generateRoutes, normalizeActions, UnsupportedActions } from '../src/codegen/route.js'
 import { generateNaming } from '../src/codegen/naming.js'
 import { addImportIfNotExists } from '../src/codegen/ts-morph/imports.js'
-import colors from '@poppinss/colors'
 import { waitWithAnimation } from '../src/helpers.js'
 import { pickAndInstallFormatter } from '../src/codegen/formatter.js'
 import { Emitter } from '../src/emitter.js'
+import { prettify } from '../src/codegen/prettier.js'
+import { createBrunoRequestFromMigration } from '../src/codegen/bruno.js'
 
 export const DreamerEvent = {
   'migration:created': Symbol('migration:created'),
@@ -24,15 +28,18 @@ export const DreamerEvent = {
 }
 
 const emitter = new Emitter()
+const cyan = (s: string) => colors.ansi().cyan(s)
 
 export default class Dreamer extends BaseCommand {
   #formatters: string[] = []
   #actions: ControllerAction[] = []
   #config?: DreamerConfig
   #naming?: ReturnType<typeof generateNaming>
+  #mod?: Awaited<ReturnType<BaseCommand['createCodemods']>>
+  #project?: InstanceType<typeof CodeTransformer>['project']
 
   static commandName = 'dreamer'
-  static description = 'Dreamer command to generate entities and more.'
+  static description = 'generate CRUD resources for a given entity'
 
   static get emitter() {
     return emitter
@@ -43,10 +50,10 @@ export default class Dreamer extends BaseCommand {
   }
 
   @args.string({
-    argumentName: 'table',
-    description: 'table name',
+    argumentName: 'entity',
+    description: 'name of the entity to generate CRUD resources for',
   })
-  declare table: string
+  declare entity: string
 
   @flags.boolean({ default: false })
   declare interactive: boolean
@@ -72,91 +79,84 @@ export default class Dreamer extends BaseCommand {
   @flags.boolean({ default: true })
   declare tests: boolean
 
-  configure() {
+  async prepare() {
     this.#config = this.app.config.get('dreamer') as DreamerConfig
-    this.#naming = generateNaming(this.table)
+    this.#naming = generateNaming(this.entity)
+    this.#mod = await this.createCodemods()
+    this.#project = await this.#mod.getTsMorphProject()
 
     let unsupported: UnsupportedActions[]
     ;[this.#actions, unsupported] = normalizeActions(this.actions)
 
     if (unsupported.length) {
-      this.logger.error(`Unsupported actions: ${unsupported.join(', ')}`)
-      return false
+      throw new Error(`unsupported actions: ${unsupported.join(', ')}`)
     }
-
-    return true
   }
 
   async run() {
-    if (!this.configure()) {
-      return
-    }
+    const $emitter = Dreamer.emitter
 
-    const codemods = await this.createCodemods()
-    const project = (await codemods.getTsMorphProject())!
+    // STEP 1: Create migration and wait for changes
+    const migrationRelativePath = `database/migrations/${this.#naming!.migration.file}`
+    const migrationFilePath = this.app.makePath(migrationRelativePath)
 
-    await codemods.makeUsingStub(stubsRoot, 'migration.stub', {
+    await this.makeUsingStub('migration.stub', {
       tableName: this.#naming!.migration.table,
       migrationName: this.#naming!.migration.file,
       ...this.#config,
     })
 
-    const migrationRelativePath = `database/migrations/${this.#naming!.migration.file}`
-    const migrationFilePath = this.app.makePath(migrationRelativePath)
-    const coloredMigrationFile = colors.ansi().cyan(migrationRelativePath)
-
     this.ui
       .instructions()
-      .add(`open ${coloredMigrationFile}`)
-      .add(`customize with your requirements, then ${colors.ansi().cyan('save to continue')}`)
+      .add(`open ${cyan(migrationRelativePath)}`)
+      .add(`customize with your requirements, then ${cyan('save to continue')}`)
       .render()
 
-    if (Dreamer.emitter.has(DreamerEvent['migration:created'])) {
-      await Dreamer.emitter.emit(DreamerEvent['migration:created'], migrationFilePath)
+    if ($emitter.has(DreamerEvent['migration:created'])) {
+      // Fakes the file change when runnig tests
+      await $emitter.emit(DreamerEvent['migration:created'], migrationFilePath)
     } else {
-      await waitWithAnimation(
-        this.logger,
-        async () => await watchFileOnce(migrationFilePath),
-        'waiting your changes'
-      )
+      await waitWithAnimation({
+        logger: this.logger,
+        message: 'waiting for your change. it will continue once you save the file',
+        action: async () => {
+          await watchFileOnce(migrationFilePath)
+          this.logger.action(`saved ${cyan(migrationRelativePath)}`).succeeded()
+        },
+      })
     }
 
-    this.logger.action(`saved ${coloredMigrationFile}`).succeeded()
-
-    project.addSourceFileAtPath(migrationFilePath)
-    const source = project.getSourceFileOrThrow(migrationFilePath)
+    // STEP 2: Parse migration
+    const source = this.#project!.addSourceFileAtPath(migrationFilePath)
     const tableStruct = new TSMorphMigrationParser(source).extractTableStructure()
 
+    // STEP 3: Generate model file
     if (this.model) {
-      const modelOptions = generateModel(this.table, this.#config!, tableStruct)
+      const modelOptions = generateModel(this.entity, this.#config!, tableStruct)
 
-      await codemods.makeUsingStub(stubsRoot, 'model.stub', {
+      await this.makeUsingStub('model.stub', {
         name: this.#naming!.model.name,
         file: this.#naming!.model.file,
         ...modelOptions,
       })
     }
 
+    // STEP 4: Generate validator file
+    await this.makeUsingStub('validator.stub', {
+      path: this.#naming!.validator.file,
+      content: generateVineSchema(tableStruct, {
+        updateSchema: this.#actions.includes('update'),
+        createSchema: this.#actions.includes('store'),
+      }),
+    })
+
+    // STEP 5: Generate controller and routes
     if (this.controller) {
       if (this.#actions.length === 0 || this.#actions.includes('index')) {
-        await Dreamer.emitter.emit(DreamerEvent['before:formats:install'], null)
+        await $emitter.emit(DreamerEvent['before:formats:install'], null)
         this.#formatters = await pickAndInstallFormatter(this)
-        await Dreamer.emitter.emit(DreamerEvent['after:formats:install'], null)
+        await $emitter.emit(DreamerEvent['after:formats:install'], null)
       }
-
-      const controllerFilename = this.#naming!.controller.file
-      const hasUpdate = this.#actions.includes('update')
-      const hasStore = this.#actions.includes('store')
-
-      const content = generateVineSchema(tableStruct, {
-        updateSchema: hasUpdate,
-        createSchema: hasStore,
-      })
-
-      await codemods.makeUsingStub(stubsRoot, 'validator.stub', {
-        path: this.#naming!.validator.file,
-        content,
-      })
 
       const controllerContent = generateController({
         model: this.#naming!.model,
@@ -166,26 +166,66 @@ export default class Dreamer extends BaseCommand {
         formatters: this.#formatters,
       })
 
-      await codemods.makeUsingStub(stubsRoot, 'controller.stub', {
+      await this.makeUsingStub('controller.stub', {
         content: controllerContent,
-        path: controllerFilename,
+        path: this.#naming!.controller.file,
       })
 
       const routesContent = generateRoutes({
-        entity: this.table,
+        entity: this.entity,
         configs: this.#config!,
         actions: this.#actions,
       })
 
-      const [router] = project!.getSourceFiles(`**/start/routes.ts`)
+      // Create Bruno request
+      if (this.#config!.bruno?.enabled) {
+        const brunoFiles = createBrunoRequestFromMigration({
+          baseurl: this.#naming!.route.base,
+          actions: this.#actions,
+          migration: tableStruct,
+          useAuth: this.#config!.bruno?.useAuth,
+        })
 
-      addImportIfNotExists(router, this.#naming!.route.import)
+        for (const { content, file: filepath } of brunoFiles) {
+          await this.makeUsingStub('bruno.request.stub', {
+            filepath: path.join(
+              this.#config!.bruno!.documentsDir,
+              this.#naming!.route.base,
+              filepath
+            ),
+            content,
+          })
+        }
+      }
 
-      await codemods.makeUsingStub(stubsRoot, 'route.stub', routesContent)
+      // Add import to main routes file
+      const router = this.#project!.getSourceFileOrThrow(this.app.makePath('start/routes.ts'))
+      addImportIfNotExists({ sourceFile: router, moduleSpecifier: this.#naming!.route.import })
 
+      // Create route file for the entity
+      await this.makeUsingStub('route.stub', routesContent)
+    }
+
+    // STEP 6: Run migrations
+    if (await this.prompt.confirm('would you like to run migrations now?', { default: true })) {
       const { runMigrator } = await import('../src/migrator.js')
       await runMigrator(this)
-      await Dreamer.emitter.emit(DreamerEvent['command:done'], null)
+    }
+
+    // FINAL: Emit command done (used for testing)
+    await $emitter.emit(DreamerEvent['command:done'], null)
+  }
+
+  async makeUsingStub(stubPath: string, stubState: Record<string, any>) {
+    try {
+      const { destination } = await this.#mod!.makeUsingStub(stubsRoot, stubPath, stubState)
+      const target = destination?.to || destination || ''
+
+      if (target.endsWith('.ts')) {
+        await prettify([target])
+      }
+    } catch (error) {
+      this.logger.error(error.message)
     }
   }
 }

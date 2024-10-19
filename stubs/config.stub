@@ -3,9 +3,8 @@
 }}}
 import { defineConfig } from '@oniryk/dreamer'
 
-const dreamerConfig = defineConfig({
-  useUUID: {{ useUUID ? 'true' : 'false' }},
-  useSoftDelete: {{ useSoftDeletes ? 'true' : 'false' }},
-})
+const dreamerConfig = defineConfig(
+  {{{ JSON.stringify(options, null, 2) }}}
+)
 
 export default dreamerConfig

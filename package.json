@@ -2,7 +2,7 @@
   "name": "@oniryk/dreamer",
   "description": "Speed up AdonisJS V6 development flow.",
   "main": "build/index.js",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "engines": {
     "node": ">=20.6.0"
   },
@@ -56,7 +56,7 @@
     "c8": "^10.1.2",
     "copyfiles": "^2.4.1",
     "del-cli": "^5.1.0",
-    "eslint": "^8.57.0",
+    "eslint": "^8.57.1",
     "np": "^10.0.6",
     "prettier": "^3.3.2",
     "sqlite3": "^5.1.7",
@@ -96,6 +96,7 @@
   "prettier": "@adonisjs/prettier-config",
   "dependencies": {
     "@adonisjs/assembler": "^7.8.2",
+    "@usebruno/lang": "^0.18.0",
     "@vinejs/vine": "^2.1.0",
     "@weedoit/easyenum": "^1.0.6",
     "luxon": "^3.5.0"

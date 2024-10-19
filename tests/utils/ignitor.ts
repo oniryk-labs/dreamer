@@ -42,6 +42,11 @@ export function createIgnitor(
         dreamer: defineDreamerConfig({
           useUUID: true,
           useSoftDelete: true,
+          bruno: {
+            enabled: true,
+            useAuth: true,
+            documentsDir: 'docs',
+          },
         }),
       },
     })
