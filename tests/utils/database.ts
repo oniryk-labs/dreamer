@@ -1,6 +1,6 @@
 import knex from 'knex'
 import { dbConfig } from './ignitor.js'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { BaseModel, column, scope } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 import { randomUUID } from 'node:crypto'
 import { compose } from '@adonisjs/core/helpers'
@@ -68,6 +68,14 @@ export async function setupDatabase() {
 
 export function getUserModel() {
   class User extends compose(BaseModel, withUUID(), withSoftDelete()) {
+    static published = scope((query) => {
+      query.where('publishedOn', '<=', 2)
+    })
+
+    static hidden = scope((query) => {
+      query.where('publishedOn', '<=', 2)
+    })
+
     @column()
     declare email: string
 

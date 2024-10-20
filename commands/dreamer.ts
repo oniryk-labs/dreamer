@@ -16,6 +16,7 @@ import { waitWithAnimation } from '../src/helpers.js'
 import { pickAndInstallFormatter } from '../src/codegen/formatter.js'
 import { Emitter } from '../src/emitter.js'
 import { CodeTransformer } from '@adonisjs/assembler/code_transformer'
+import { prettify } from '../src/codegen/prettier.js'
 
 export const DreamerEvent = {
   'migration:created': Symbol('migration:created'),
@@ -97,7 +98,7 @@ export default class Dreamer extends BaseCommand {
     const migrationRelativePath = `database/migrations/${this.#naming!.migration.file}`
     const migrationFilePath = this.app.makePath(migrationRelativePath)
 
-    await this.#mod!.makeUsingStub(stubsRoot, 'migration.stub', {
+    await this.makeUsingStub('migration.stub', {
       tableName: this.#naming!.migration.table,
       migrationName: this.#naming!.migration.file,
       ...this.#config,
@@ -131,7 +132,7 @@ export default class Dreamer extends BaseCommand {
     if (this.model) {
       const modelOptions = generateModel(this.entity, this.#config!, tableStruct)
 
-      await this.#mod!.makeUsingStub(stubsRoot, 'model.stub', {
+      await this.makeUsingStub('model.stub', {
         name: this.#naming!.model.name,
         file: this.#naming!.model.file,
         ...modelOptions,
@@ -139,7 +140,7 @@ export default class Dreamer extends BaseCommand {
     }
 
     // STEP 4: Generate validator file
-    await this.#mod!.makeUsingStub(stubsRoot, 'validator.stub', {
+    await this.makeUsingStub('validator.stub', {
       path: this.#naming!.validator.file,
       content: generateVineSchema(tableStruct, {
         updateSchema: this.#actions.includes('update'),
@@ -147,7 +148,7 @@ export default class Dreamer extends BaseCommand {
       }),
     })
 
-    // STEP 4: Generate controller and routes
+    // STEP 5: Generate controller and routes
     if (this.controller) {
       if (this.#actions.length === 0 || this.#actions.includes('index')) {
         await $emitter.emit(DreamerEvent['before:formats:install'], null)
@@ -163,7 +164,7 @@ export default class Dreamer extends BaseCommand {
         formatters: this.#formatters,
       })
 
-      await this.#mod!.makeUsingStub(stubsRoot, 'controller.stub', {
+      await this.makeUsingStub('controller.stub', {
         content: controllerContent,
         path: this.#naming!.controller.file,
       })
@@ -179,10 +180,10 @@ export default class Dreamer extends BaseCommand {
       addImportIfNotExists({ sourceFile: router, moduleSpecifier: this.#naming!.route.import })
 
       // Create route file for the entity
-      await this.#mod!.makeUsingStub(stubsRoot, 'route.stub', routesContent)
+      await this.makeUsingStub('route.stub', routesContent)
     }
 
-    // STEP 5: Run migrations
+    // STEP 6: Run migrations
     if (await this.prompt.confirm('would you like to run migrations now?', { default: true })) {
       const { runMigrator } = await import('../src/migrator.js')
       await runMigrator(this)
@@ -190,5 +191,18 @@ export default class Dreamer extends BaseCommand {
 
     // FINAL: Emit command done (used for testing)
     await $emitter.emit(DreamerEvent['command:done'], null)
+  }
+
+  async makeUsingStub(stubPath: string, stubState: Record<string, any>) {
+    try {
+      const { destination } = await this.#mod!.makeUsingStub(stubsRoot, stubPath, stubState)
+      const target = destination?.to || destination || ''
+
+      if (target.endsWith('.ts')) {
+        await prettify([target])
+      }
+    } catch (error) {
+      this.logger.error(error.message)
+    }
   }
 }
