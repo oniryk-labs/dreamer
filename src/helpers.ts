@@ -1,4 +1,5 @@
 import { BaseCommand } from '@adonisjs/core/ace'
+import colors from '@poppinss/colors'
 
 export const pipe =
   <T extends any[], R>(...fns: [...{ [K in keyof T]: (arg: any) => any }, (...args: T) => R]) =>
@@ -20,7 +21,23 @@ export const waitWithAnimation = async ({
   animation.stop()
 }
 
-export function dd(...args: any[]) {
-  console.log(...args)
+export function dd(arg: any) {
+  console.dir(arg, { depth: Number.POSITIVE_INFINITY })
   process.exit(1)
+}
+
+export function lg(...args: any[]) {
+  const cwd = process.cwd()
+  const stack = new Error().stack!
+  const callerLine = stack.split('\n')[2]
+  const match = callerLine.match(/\((.*):(\d+):(\d+)\)$/)
+
+  if (match) {
+    const [, file, line] = match
+    const relativeFile = file.replace(cwd, '.')
+    console.log(colors.ansi().gray(`\nconsole.log @ ${relativeFile}:${line} :: ====`))
+  }
+
+  console.log(...args)
+  console.log(colors.ansi().gray(`==== ::\n`))
 }

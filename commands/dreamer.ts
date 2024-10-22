@@ -12,11 +12,17 @@ import { generateRoutes, normalizeActions, UnsupportedActions } from '../src/cod
 import { generateNaming } from '../src/codegen/naming.js'
 import { addImportIfNotExists } from '../src/codegen/ts-morph/imports.js'
 import colors from '@poppinss/colors'
-import { waitWithAnimation } from '../src/helpers.js'
+import { dd, waitWithAnimation } from '../src/helpers.js'
 import { pickAndInstallFormatter } from '../src/codegen/formatter.js'
 import { Emitter } from '../src/emitter.js'
 import { CodeTransformer } from '@adonisjs/assembler/code_transformer'
 import { prettify } from '../src/codegen/prettier.js'
+import {
+  convertMigrationToBody,
+  createBrunoRequest,
+  createBrunoRequestFromMigration,
+} from '../src/codegen/bruno.js'
+import path from 'node:path'
 
 export const DreamerEvent = {
   'migration:created': Symbol('migration:created'),
@@ -174,6 +180,27 @@ export default class Dreamer extends BaseCommand {
         configs: this.#config!,
         actions: this.#actions,
       })
+
+      // Create Bruno request
+      if (this.#config!.bruno?.enabled) {
+        const brunoFiles = createBrunoRequestFromMigration({
+          baseurl: this.#naming!.route.base,
+          actions: this.#actions,
+          migration: tableStruct,
+          useAuth: this.#config!.bruno?.useAuth,
+        })
+
+        for (const { content, file: filepath } of brunoFiles) {
+          await this.makeUsingStub('bruno.request.stub', {
+            filepath: path.join(
+              this.#config!.bruno!.documentsDir,
+              this.#naming!.route.base,
+              filepath
+            ),
+            content,
+          })
+        }
+      }
 
       // Add import to main routes file
       const router = this.#project!.getSourceFileOrThrow(this.app.makePath('start/routes.ts'))

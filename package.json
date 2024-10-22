@@ -96,6 +96,7 @@
   "prettier": "@adonisjs/prettier-config",
   "dependencies": {
     "@adonisjs/assembler": "^7.8.2",
+    "@usebruno/lang": "^0.18.0",
     "@vinejs/vine": "^2.1.0",
     "@weedoit/easyenum": "^1.0.6",
     "luxon": "^3.5.0"

@@ -19,3 +19,9 @@ export async function isPackageInstalled(appRoot: string, ...packages: string[])
     pending: notInstalledPackages,
   }
 }
+
+export async function getPackageName(appRoot: string) {
+  const rawPackageJson = await readFile(path.join(appRoot, 'package.json'), 'utf-8')
+  const packageJson = JSON.parse(rawPackageJson)
+  return packageJson.name as string
+}

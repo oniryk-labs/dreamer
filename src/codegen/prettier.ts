@@ -1,9 +1,10 @@
-import { constants, readFile, access, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import type { Options } from 'prettier'
 
 // May not the better way to do this, but it works for now
 // TODO: Find a way import from @adonisjs/prettier-config
 const prettyConfig: Options = {
+  parser: 'typescript',
   trailingComma: 'es5',
   semi: false,
   singleQuote: true,
@@ -23,21 +24,11 @@ const getPrettier = async () => {
 }
 
 export async function prettify(filepaths: string[]) {
-  const prettier = await getPrettier()
-
-  if (!prettier) {
-    return
-  }
+  const prettier = (await getPrettier())!
 
   for (const filepath of filepaths) {
-    const exists = await access(filepath, constants.R_OK)
-      .then(() => true)
-      .catch(() => false)
-
-    if (!exists) {
-      const content = await readFile(filepath, 'utf8')
-      const formatted = await prettier.format(content, prettyConfig)
-      await writeFile(filepath, formatted)
-    }
+    const content = await readFile(filepath, 'utf8')
+    const formatted = await prettier.format(content, prettyConfig)
+    await writeFile(filepath, formatted)
   }
 }
