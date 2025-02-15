@@ -1,22 +1,27 @@
+import type { NormalizeConstructor } from '@adonisjs/core/types/helpers'
+import type {
+  ExtractScopes,
+  LucidModel,
+  ModelAdapterOptions,
+  ModelQueryBuilderContract,
+} from '@adonisjs/lucid/types/model'
 import { DateTime } from 'luxon'
 import { randomUUID } from 'node:crypto'
-import type { ModelAdapterOptions, ExtractScopes, LucidModel } from '@adonisjs/lucid/types/model'
-import type { NormalizeConstructor } from '@adonisjs/core/types/helpers'
-import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 
 import {
   BaseModel,
-  column,
-  beforeSave,
   beforeFetch,
-  beforePaginate,
   beforeFind,
+  beforePaginate,
+  beforeSave,
+  column,
 } from '@adonisjs/lucid/orm'
 
 export type ExcludeUndefined<T> = T extends undefined ? never : T
 export type Scopes<T extends LucidModel> = ExcludeUndefined<keyof ExtractScopes<T>>
+export type UUIDOptions = { overrideFind?: boolean }
 
-export function withUUID() {
+export function withUUID(opts?: UUIDOptions) {
   return <Model extends NormalizeConstructor<typeof BaseModel>>(superclass: Model) => {
     class ModelWithUUID extends superclass {
       @column({ isPrimary: true, serializeAs: null })
@@ -37,10 +42,34 @@ export function withUUID() {
         id: string,
         options?: ModelAdapterOptions
       ) {
+        if (opts?.overrideFind === false) {
+          return super.find(id, options)
+        }
+
         return this.findBy('uuid', id, options)
       }
 
       static async findOrFail<T extends typeof BaseModel>(
+        this: T,
+        id: string,
+        options?: ModelAdapterOptions
+      ) {
+        if (opts?.overrideFind === false) {
+          return super.findOrFail(id, options)
+        }
+
+        return this.findByOrFail('uuid', id, options)
+      }
+
+      static async findByUuid<T extends typeof BaseModel>(
+        this: T,
+        id: string,
+        options?: ModelAdapterOptions
+      ) {
+        return this.findBy('uuid', id, options)
+      }
+
+      static async findByUuidOrFail<T extends typeof BaseModel>(
         this: T,
         id: string,
         options?: ModelAdapterOptions

@@ -2,7 +2,7 @@
   "name": "@oniryk/dreamer",
   "description": "Speed up AdonisJS V6 development flow.",
   "main": "build/index.js",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "engines": {
     "node": ">=20.6.0"
   },
