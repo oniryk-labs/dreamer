@@ -5,7 +5,7 @@ import { BaseModel } from '@adonisjs/lucid/orm'
 import { VineValidator } from '@vinejs/vine'
 import type { Infer, SchemaTypes } from '@vinejs/vine/types'
 
-import { ExtractScopes } from '@adonisjs/lucid/types/model'
+import { ExtractScopes, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import { DreamerConfig } from '../../types.js'
 import { pagination } from '../validator/pagination.js'
 import { OutputFormatFn } from './format.js'
@@ -55,6 +55,7 @@ export function index<
     formats?: OutputFormatFn<Model>[]
     scope?: Scopes<Model> | ((scopes: ExtractScopes<Model>) => void)
     ability?: BoucerAbility
+    query?: (query: ModelQueryBuilderContract<Model>) => void
   }
 ) {
   return async (ctx: HttpContext) => {
@@ -90,6 +91,10 @@ export function index<
           q[options.scope]()
         })
       }
+    }
+
+    if (options?.query) {
+      options.query(baseQuery)
     }
 
     if (options?.formats) {
@@ -154,7 +159,6 @@ export function store<
     }
 
     await row.save()
-    return success(response, row.toJSON(), 201)
     return success(response, row.toJSON(), options?.status || 201)
   }
 }
@@ -184,7 +188,7 @@ export function update<
     }
 
     await row.save()
-    return success(response, row.toJSON(), 201)
+    return success(response, row.toJSON(), 200)
   }
 }
 
