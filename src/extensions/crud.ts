@@ -55,7 +55,7 @@ export function index<
     formats?: OutputFormatFn<Model>[]
     scope?: Scopes<Model> | ((scopes: ExtractScopes<Model>) => void)
     ability?: BoucerAbility
-    query?: (query: ModelQueryBuilderContract<Model>) => void
+    query?: (query: ModelQueryBuilderContract<Model>, ctx: HttpContext) => void
   }
 ) {
   return async (ctx: HttpContext) => {
@@ -94,7 +94,7 @@ export function index<
     }
 
     if (options?.query) {
-      options.query(baseQuery)
+      options.query(baseQuery, ctx)
     }
 
     if (options?.formats) {
