@@ -13,6 +13,10 @@ import { success } from './http.js'
 import { parseModelSeachableFields, Scopes, SearchableModel } from './lucid.js'
 
 export type GenericMetadata = Record<string, any> | undefined
+export type QueryCostumizer<M extends SearchableModel> = (
+  query: ModelQueryBuilderContract<M>,
+  ctx: HttpContext
+) => void
 
 type BoucerAbility = ReturnType<(typeof Bouncer)['ability']>
 
@@ -24,6 +28,7 @@ export type ShowOptions<M extends typeof BaseModel> = {
   key?: string
   mutate?: (row: InstanceType<M>) => any
   ability?: BoucerAbility
+  query?: QueryCostumizer<M>
 }
 
 export type StoreOptions<M extends typeof BaseModel, Payload> = {
@@ -55,7 +60,7 @@ export function index<
     formats?: OutputFormatFn<Model>[]
     scope?: Scopes<Model> | ((scopes: ExtractScopes<Model>) => void)
     ability?: BoucerAbility
-    query?: (query: ModelQueryBuilderContract<Model>, ctx: HttpContext) => void
+    query?: QueryCostumizer<Model>
   }
 ) {
   return async (ctx: HttpContext) => {
@@ -118,8 +123,15 @@ export function index<
 }
 
 export function show<Model extends typeof BaseModel>(model: Model, options?: ShowOptions<Model>) {
-  return async ({ params, response, bouncer }: HttpContext) => {
-    const row = await model.query().where(getIdKey(options?.key), params.id).firstOrFail()
+  return async (ctx: HttpContext) => {
+    const { params, response, bouncer } = ctx
+    const query = model.query().where(getIdKey(options?.key), params.id)
+
+    if (options?.query) {
+      options.query(query, ctx)
+    }
+
+    const row = await query.firstOrFail()
 
     if (options?.ability) {
       if (!bouncer) throw new Error('@adonisjs/bouncer is required to use abilities')
