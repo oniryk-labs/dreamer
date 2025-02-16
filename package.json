@@ -2,7 +2,7 @@
   "name": "@oniryk/dreamer",
   "description": "Speed up AdonisJS V6 development flow.",
   "main": "build/index.js",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "engines": {
     "node": ">=20.6.0"
   },
@@ -66,9 +66,9 @@
     "typescript": "^5.4.5"
   },
   "peerDependencies": {
+    "@adonisjs/bouncer": "^3.1.5",
     "@adonisjs/core": "^6.2.0",
-    "@adonisjs/lucid": "^21.2.0",
-    "@adonisjs/bouncer": "^3.1.5"
+    "@adonisjs/lucid": "^21.2.0"
   },
   "publishConfig": {
     "access": "public",
@@ -99,7 +99,7 @@
   "dependencies": {
     "@adonisjs/assembler": "^7.8.2",
     "@usebruno/lang": "^0.18.0",
-    "@vinejs/vine": "^2.1.0",
+    "@vinejs/vine": "^3.0.0",
     "@weedoit/easyenum": "^1.0.6",
     "luxon": "^3.5.0"
   }
