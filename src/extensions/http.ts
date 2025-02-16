@@ -1,3 +1,4 @@
+import { Exception } from '@adonisjs/core/exceptions'
 import type { Response } from '@adonisjs/core/http'
 
 export type SuccessResponseCode = 200 | 201 | 202 | 204
@@ -29,22 +30,28 @@ export function error(
   originError: Error | { code: string; message: string },
   statusCode: ErrorResponseCode = 500
 ) {
-  if (originError.constructor.name === 'ValidationError') {
-    return response.status((originError as any).status).json({
+  const err = originError as any
+  const status = typeof (err as any).status === 'number' ? err.status : statusCode
+
+  if (err.constructor.name === 'ValidationError') {
+    return response.status(err.status).json({
       status: 'error',
       error: {
-        code: 'VALIDATION_ERROR',
-        message: originError.message,
-        issues: (originError as any).messages,
+        code: 'E_VALIDATION_ERROR',
+        issues: err.messages.map((issue: any) => ({
+          issue: `${issue.rule}:${issue.field}`,
+          message: issue.message,
+          meta: issue.meta,
+        })),
       },
     })
   }
 
-  return response.status(statusCode).json({
+  return response.status(status).json({
     status: 'error',
     error: {
-      code: originError instanceof Error ? originError.name : originError.code,
-      message: originError.message,
+      code: err instanceof Exception ? err.code : (err as any).code || (err as any).name,
+      message: err.message,
     },
   })
 }
