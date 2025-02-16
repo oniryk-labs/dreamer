@@ -29,6 +29,7 @@ export type ShowOptions<M extends typeof BaseModel> = {
 export type StoreOptions<M extends typeof BaseModel, Payload> = {
   mutate?: (row: InstanceType<M>, payload: Payload) => Promise<void> | void
   ability?: BoucerAbility
+  status?: 200 | 201
 }
 
 export type UpdateOptions<M extends typeof BaseModel, Payload> = {
@@ -154,6 +155,7 @@ export function store<
 
     await row.save()
     return success(response, row.toJSON(), 201)
+    return success(response, row.toJSON(), options?.status || 201)
   }
 }
 
