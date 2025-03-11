@@ -99,7 +99,7 @@ export function withSoftDelete() {
       static ignoreDeletedBeforeFetch(
         query: ModelQueryBuilderContract<typeof ModelWithSoftDelete>
       ) {
-        query.whereNull('deleted_at')
+        query.whereNull(`${query.model.table}.deleted_at`)
       }
 
       @beforePaginate()
@@ -107,8 +107,8 @@ export function withSoftDelete() {
         ModelQueryBuilderContract<typeof ModelWithSoftDelete>,
         ModelQueryBuilderContract<typeof ModelWithSoftDelete>,
       ]) {
-        query.whereNull('deleted_at')
-        countQuery.whereNull('deleted_at')
+        query.whereNull(`${query.model.table}.deleted_at`)
+        countQuery.whereNull(`${query.model.table}.deleted_at`)
       }
 
       async delete() {
