@@ -48,11 +48,21 @@ export function generateRoutes({
     matchers.push(`.where('${param}', router.matchers.${configs.useUUID ? 'uuid' : 'number'}())`)
   }
 
+  const deps = [
+    ...(configs.bruno?.useAuth ? [`import { middleware } from '#start/kernel'`] : []),
+    route.controller,
+  ]
+
   return {
-    deps: route.controller,
+    deps: deps.join('\n'),
     routes: actionCalls.map((c) => `    ${c}`).join('\n'),
     matchers: matchers.map((c) => `  ${c}`).join('\n'),
-    prefix: route.prefix ? `.prefix('${route.prefix}')` : '',
+    prefix: [
+      route.prefix ? `.prefix('${route.prefix}')` : '',
+      configs.bruno?.useAuth ? '.use(middleware.auth())' : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
     file: route.file,
     imports: route.import,
   }
