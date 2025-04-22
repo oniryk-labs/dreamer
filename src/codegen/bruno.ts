@@ -1,10 +1,10 @@
+import { faker } from '@faker-js/faker'
 //@ts-ignore
 import { jsonToBruV2 } from '@usebruno/lang'
-import { faker } from '@faker-js/faker'
-import path from 'node:path'
-import { TableStructure } from './ts-morph/parsers/migration.js'
 import { randomInt, randomUUID } from 'node:crypto'
+import path from 'node:path'
 import { ControllerAction } from './controller.js'
+import { TableStructure } from './ts-morph/parsers/migration.js'
 const randomFloat = (precision: number) => Number((Math.random() * 100).toFixed(precision))
 
 export type LowercaseMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
@@ -37,7 +37,7 @@ export function createBrunoRequest(params: BrunoRequestOptions) {
     meta: {
       name: params.name,
       type: 'http',
-      seq: String(params.seq ?? 0),
+      seq: String(params.seq ?? 1),
     },
     http: {
       method: params.method.toLowerCase() as LowercaseMethod,
@@ -211,7 +211,7 @@ export function createBrunoRequestFromMigration({
             method: actionToMethod(cur),
             urlSegment: `${baseurl}/${param}`,
             json,
-            seq: acc.length,
+            seq: acc.length + 1,
             useAuth,
           }),
         })
