@@ -64,6 +64,10 @@ ${enums
       }
     }
 
+    if (column.name.endsWith('_id') && config.useUUID) {
+      decoratorOptions.push('serializeAs: null')
+    }
+
     // Handle DateTime columns
     if (column.type === 'dateTime' || column.type === 'timestamp') {
       decoratorString = '@column.dateTime'

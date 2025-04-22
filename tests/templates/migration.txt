@@ -8,6 +8,7 @@ export default class extends BaseSchema {
       table.increments('id', { primaryKey: false }).notNullable()
       table.uuid('uuid').notNullable()
       table.text('text_field').notNullable()
+      table.integer('null_serialized_id').notNullable()
       table.integer('integer_field').notNullable()
       table.bigInteger('visits')
       table.text('text_field_long', 'longtext').notNullable()
